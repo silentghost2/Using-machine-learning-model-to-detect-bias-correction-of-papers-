@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grading Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Basic Reset & Body */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background-color: #f0f2f5; color: #333; }
+        .hidden { display: none !important; }
+
+        /* --- Login Page Styles --- */
+        .page-container-login { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #login-section { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center; width: 350px; }
+        #login-section h2 { margin-bottom: 20px; color: #333; }
+        #login-section .input-group { margin-bottom: 15px; text-align: left; }
+        #login-section label { display: block; margin-bottom: 5px; color: #555; font-size: 0.9em; }
+        #login-section input[type="text"],
+        #login-section input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; }
+        #login-section button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; transition: background-color 0.3s ease; }
+        #login-section button:hover { background-color: #0056b3; }
+        #login-error { color: red; font-size: 0.9em; margin-top: 10px; height: 1em; }
+
+        /* --- Home "Page" (Dashboard) Styles --- */
+        #home-section { width: 100vw; height: 100vh; display: flex; overflow: hidden; }
+        .left-panel { width: 250px; background-color: #2c3e50; color: #ecf0f1; padding: 20px; transition: width 0.3s ease; display: flex; flex-direction: column; overflow-y: auto; }
+        .left-panel.collapsed { width: 60px; }
+        .left-panel.collapsed .user-details span,
+        .left-panel.collapsed .nav-links ul li a span,
+        .left-panel.collapsed .user-details .college-name,
+        .left-panel.collapsed .create-category-form,
+        .left-panel.collapsed .upload-paper-form,
+        .left-panel.collapsed .user-info .user-details { display: none; }
+        .left-panel.collapsed .user-details .user-id { font-size: 0.7em; text-align: center; width: 100%; }
+        .toggle-button { background: none; border: none; color: #ecf0f1; font-size: 1.5em; cursor: pointer; margin-bottom: 20px; text-align: left; width:100%;}
+        .left-panel.collapsed .toggle-button { text-align: center; }
+        .user-info { text-align: center; margin-bottom: 30px; }
+        .left-panel.collapsed .user-info { margin-bottom: 10px; }
+        .user-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: #bdc3c7; margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 2em; }
+        .left-panel.collapsed .user-avatar { width: 40px; height: 40px; font-size: 1.2em; margin-bottom: 5px; }
+        .user-details .user-name { font-size: 1.2em; font-weight: bold; margin-bottom: 3px; }
+        .user-details .user-id, .user-details .college-name { font-size: 0.9em; color: #bdc3c7; margin-bottom: 3px; }
+        .nav-links ul { list-style: none; }
+        .nav-links ul li a { display: flex; align-items:center; padding: 10px 0; color: #ecf0f1; text-decoration: none; transition: background-color 0.2s ease; border-radius: 4px; }
+        .left-panel.collapsed .nav-links ul li a { justify-content: center; padding: 10px; }
+        .nav-links ul li a:hover { background-color: #34495e; }
+        .nav-links ul li a i { margin-right: 10px; width: 20px; text-align: center;}
+        .left-panel.collapsed .nav-links ul li a i { margin-right: 0; font-size: 1.2em; }
+        .left-panel-form { margin-top: 20px; padding-top: 20px; border-top: 1px solid #34495e;}
+        .left-panel-form h4 { font-size: 1em; margin-bottom: 10px; }
+        .left-panel-form input[type="text"],
+        .left-panel-form select,
+        .left-panel-form input[type="file"] { width: calc(100% - 10px); padding: 8px; margin-bottom:10px; border-radius:3px; border:1px solid #7f8c8d; background-color: #ecf0f1; color: #2c3e50; }
+        .left-panel-form button { width:100%; padding:8px; background-color: #3498db; color:white; border:none; border-radius:3px; cursor:pointer; }
+        .left-panel-form button:hover { background-color: #2980b9; }
+        .upload-paper-form { margin-top: auto; } /* Pushes upload form to bottom */
+        .main-content { flex-grow: 1; background-color: #f0f2f5; padding: 20px; overflow-y: auto; }
+        .main-content-header { display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
+        .main-content-header h1 { font-size: 1.8em; color: #333; }
+        .main-content-header .back-button { padding: 8px 15px; background-color: #7f8c8d; color: white; text-decoration: none; border-radius: 4px; cursor:pointer; }
+        .main-content-header .back-button:hover { background-color: #6c7a89;}
+        .subject-categories, .papers-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .subject-card, .paper-item { background-color: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+        .subject-card .card-header, .paper-item .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .subject-card .subject-name, .paper-item .paper-title { font-size: 1.3em; font-weight: bold; color: #2c3e50; }
+        .subject-card .subject-id, .paper-item .paper-id { font-size: 0.9em; color: #7f8c8d; background-color: #ecf0f1; padding: 3px 6px; border-radius: 4px; }
+        .subject-card .card-body .status, .paper-item .card-body .status { font-size: 1em; color: #555; margin-bottom: 15px; }
+        .subject-card .card-body .status i, .paper-item .card-body .status i { margin-right: 8px; color: #7f8c8d; }
+        .subject-card .action-button, .paper-item .action-button { display: inline-block; padding: 8px 15px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px; transition: background-color 0.3s ease; margin-right: 5px; font-size: 0.9em; }
+        .subject-card .action-button.disabled, .paper-item .action-button.disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .subject-card .action-button:not(.disabled):hover, .paper-item .action-button:not(.disabled):hover { background-color: #2980b9; }
+        .delete-button { background-color: #e74c3c; } .delete-button:hover { background-color: #c0392b; }
+        .edit-button { background-color: #f39c12; } .edit-button:hover { background-color: #d35400; }
+        .papers-list { grid-template-columns: 1fr; } .paper-item { margin-bottom: 10px; }
+        .paper-item .action-buttons { margin-top:10px;}
+        .analyze-button { background-color: #2ecc71;} .analyze-button:hover { background-color: #27ae60;}
+        #uploadPreviewContainer { margin-top: 10px; text-align: center; }
+        #uploadPreview { max-width: 100%; max-height: 150px; border: 1px solid #bdc3c7; border-radius: 3px; margin-top:5px; }
+        #uploadStatus { font-size: 0.9em; margin-top: 5px; color: #555;}
+
+
+        /* --- Grading Interface Styles --- */
+        #gradingInterfaceSection { /* This is the new main container */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 15px;
+            background-color: #f0f2f5;
+        }
+        .grading-interface-container { /* Actual content area for grading */
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1600px; /* Max width for larger screens */
+            margin: 0 auto; /* Centered */
+            gap: 20px;
+            box-sizing: border-box;
+        }
+        .grading-header {
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto 15px auto; /* Consistent with container */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .grading-header h1 { font-size: 1.8em; color: #333; }
+        .grading-header .back-to-dashboard-button { padding: 8px 15px; background-color: #007bff; color: white; border:none; text-decoration: none; border-radius: 4px; cursor:pointer; }
+        .grading-header .back-to-dashboard-button:hover { background-color: #0056b3;}
+
+
+        .answer-sheet-viewer {
+            flex: 2; /* Takes up 2/3 of the space */
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px; /* Ensure it has some height */
+        }
+        .answer-sheet-viewer h2 {
+            margin-top: 0;
+            color: #495057;
+            text-align: center;
+            width: 100%;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+        .image-display {
+            flex-grow: 1; /* Allows the image container to take available space */
+            border: 2px dashed #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #aaa;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            min-height: 500px; /* Minimum height for the image area */
+            width: 100%; /* Take full width of parent */
+            background-color: white; /* So placeholder text is visible */
+        }
+        .image-display img {
+            max-width: 100%;
+            max-height: 70vh; /* Max height relative to viewport */
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            object-fit: contain; /* Ensures image is scaled correctly */
+        }
+        .navigation-buttons {
+            margin-top: 15px;
+            text-align: center;
+        }
+        .navigation-buttons button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: 1px solid #007bff;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .navigation-buttons button:hover { background-color: #0056b3; }
+        .navigation-buttons button:disabled { background-color: #cccccc; border-color: #bbbbbb; cursor: not-allowed;}
+
+
+        .marking-scheme {
+            flex: 1; /* Takes up 1/3 of the space */
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow-y: auto; /* Scroll if content exceeds height */
+            max-height: 85vh; /* Max height relative to viewport */
+            display: flex; /* For flex-grow and pushing total to bottom */
+            flex-direction: column;
+        }
+        .marking-scheme-content { /* New wrapper for scrollable content */
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .marking-scheme .section-title {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .section-switcher {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .section-switcher button {
+            padding: 8px 15px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .section-switcher button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+        .section-switcher button:hover:not(.active) { background-color: #e0e0e0; }
+
+        .section-content {
+            /* display: none; JS will show one */
+        }
+        .section-content.active { display: block; }
+        .section-header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .marking-scheme h3 { /* For Q1), Q2) etc. */
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #444;
+        }
+        .question-block {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        .question-block:not(:last-child) {
+            border-bottom: 1px solid #f0f0f0; /* Lighter separator between Q blocks */
+        }
+        .sub-question { /* Container for label + score options */
+            display: flex;
+            align-items: flex-start; /* Align label and options nicely */
+            margin-bottom: 10px;
+            flex-wrap: nowrap; /* Prevent score options from wrapping under label */
+        }
+        .question-label { /* For a), b), etc. */
+            font-weight: bold;
+            min-width: 65px; /* Give space for "Qx) a)" or just "a)" */
+            margin-right: 10px;
+            padding-top: 4px; /* Align text better with radio buttons */
+            font-size: 0.9em;
+        }
+        .sec-a-q-label { min-width: 40px; } /* Shorter label for Sec A */
+
+        .score-options {
+            display: flex;
+            flex-wrap: wrap; /* Allow scores to wrap to next line if needed */
+            gap: 5px 8px; /* Row gap, Column gap */
+            flex-grow: 1; /* Allow it to take available space */
+        }
+        .score-options label { /* Individual score option (radio + text) */
+            display: inline-flex; /* For alignment */
+            align-items: center; /* Vertically align radio and text */
+            cursor: pointer;
+            padding: 3px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 0.85em; /* Slightly smaller score text */
+            white-space: nowrap; /* Keep score and 1/2 on same line */
+        }
+        .score-options label:hover { background-color: #e9e9e9; }
+        .score-options input[type="radio"] { margin-right: 4px; }
+        .score-options label:has(input[type="radio"]:checked) { /* Modern CSS for selected */
+            background-color: #007bff;
+            border-color: #0056b3;
+            color: white;
+        }
+        .total-marks-section {
+            margin-top: auto; /* Pushes to the bottom */
+            padding-top: 20px;
+            border-top: 2px solid #007bff;
+            text-align: right;
+            font-size: 1.2em;
+        }
+        .total-marks-section h4 {
+            display: inline;
+            font-weight: bold;
+            color: #333;
+        }
+        #totalMarksDisplay {
+            font-weight: bold;
+            color: #007bff;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        /* Styles for AI mark display - can be enhanced */
+        .ai-mark-display {
+            font-size: 0.9em;
+            margin-left: 8px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            background-color: #f0f0f0;
+        }
+        .discrepancy-highlight .question-label,
+        .discrepancy-highlight .score-options label:has(input[type="radio"]:checked) { /* Highlight selected original score if discrepancy*/
+            /* color: #e74c3c !important; */ /* Strong red for text */
+            border: 2px solid #e74c3c !important; /* Red border for the selected original score */
+            /* background-color: #fadbd8 !important; */ /* Light red background for selected original score */
+        }
+         .discrepancy-highlight .ai-mark-display {
+            color: #c0392b !important; /* Darker red for AI mark text */
+            font-weight: bold;
+            background-color: #f5b7b1 !important; /* Lighter red background for AI mark */
+        }
+         #aiTotalMarksDisplay {
+            font-weight: bold;
+            margin-left: 15px;
+            padding: 5px 10px;
+            background-color: #e0e0e0; /* Slightly different from manual total */
+            border-radius: 4px;
+        }
+        #aiTotalMarksDisplay.discrepancy {
+            color: #e74c3c; /* Red if total AI score is different */
+            background-color: #f5b7b1;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) { /* Tablet and below */
+            #home-section, .grading-interface-container {
+                flex-direction: column;
+            }
+            .left-panel, .answer-sheet-viewer, .marking-scheme {
+                flex: none; /* Reset flex grow/shrink */
+                width: 100%;
+                max-height: none; /* Allow them to take full height needed */
+            }
+            .left-panel.collapsed {
+                width:100%; /* Full width when collapsed on small screens */
+                height: auto; /* Auto height */
+            }
+            .left-panel.collapsed .toggle-button { text-align: left; } /* Keep toggle to left */
+
+             .image-display img {
+                max-height: 60vh; /* Adjust image height for smaller screens */
+            }
+            .marking-scheme { max-height: 60vh; /* Adjust height on smaller screens too */ }
+        }
+
+        @media (max-width: 768px) { /* Mobile */
+            .grading-interface-container {
+                margin: 10px auto; /* Less margin */
+                padding: 10px;     /* Less padding */
+            }
+             /* Further adjustments for mobile can be added here */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="page-container-login" id="loginPageContainer">
+        <section id="login-section">
+            <h2>Faculty Login</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="userId">User ID</label>
+                    <input type="text" id="userId" name="userId" required placeholder="e.g., JD1001">
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                </div>
+                <button type="submit">Login</button>
+                <div id="login-error"></div>
+            </form>
+        </section>
+    </div>
+
+    <section id="home-section" class="hidden">
+        <aside class="left-panel" id="leftPanel">
+            <button class="toggle-button" id="toggleNavButton"><i class="fas fa-bars"></i></button>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">JD</div>
+                <div class="user-details">
+                    <span class="user-name" id="userName"></span>
+                    <span class="user-id" id="displayUserId"></span>
+                    <span class="college-name" id="collegeName"></span>
+                </div>
+            </div>
+            <nav class="nav-links">
+                <ul>
+                    <li><a href="#" id="dashboardLink"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
+                    <li><a href="#"><i class="fas fa-flag"></i> <span>Flagged Papers</span></a></li>
+                    <li><a href="#"><i class="fas fa-user"></i> <span>My Profile</span></a></li>
+                    <li><a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+                    <li><a href="#" id="logoutButton"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a></li>
+                </ul>
+            </nav>
+            <div class="create-category-form left-panel-form">
+                <h4>Create New Category</h4>
+                <input type="text" id="newCategoryNameInput" placeholder="Category Name">
+                <button id="createCategoryButton">Create</button>
+            </div>
+            <div class="upload-paper-form left-panel-form">
+                <h4>Upload New Paper</h4>
+                <input type="text" id="newPaperTitleInput" placeholder="Paper Title (e.g., Student X Midterm)">
+                <select id="uploadCategorySelect">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+                <input type="file" id="paperFileInput" accept="image/*,.pdf" multiple> <!-- Added 'multiple' -->
+                 <!-- Ground Truth PDF upload - integrated here or could be separate -->
+                <label for="groundTruthPdfInput" style="font-size:0.9em; margin-top:10px;">Ground Truth PDF (Optional):</label>
+                <input type="file" id="groundTruthPdfInput" accept=".pdf">
+                <div id="uploadPreviewContainer" class="hidden">
+                    <img id="uploadPreview" src="#" alt="Upload Preview">
+                    <div id="uploadStatus"></div> <!-- For showing number of files or PDF name -->
+                </div>
+                <button id="uploadPaperButton">Upload Paper</button>
+            </div>
+        </aside>
+        <main class="main-content" id="mainContentArea">
+            <header class="main-content-header">
+                <h1 id="mainContentTitle">Subject Dashboard</h1>
+                <button id="backToSubjectsButton" class="back-button hidden">&larr; Back to Subjects</button>
+            </header>
+            <section class="subject-categories" id="subjectCategoriesContainer">
+                <!-- Subject cards will be dynamically inserted here -->
+            </section>
+            <section class="papers-list hidden" id="papersListContainer">
+                <!-- Papers list will be dynamically inserted here -->
+            </section>
+        </main>
+    </section>
+
+    <section id="gradingInterfaceSection" class="hidden">
+        <div class="grading-header">
+             <h1 id="gradingInterfaceTitle">Grading Paper</h1>
+             <button id="backToPapersFromGrading" class="back-to-dashboard-button">&larr; Back to Papers</button>
+        </div>
+        <div class="grading-interface-container">
+            <div class="answer-sheet-viewer">
+                <h2 id="gradingAnswerSheetTitle">Answer Sheet</h2>
+                <div class="image-display">
+                    <img id="gradingImageDisplay" src="https://via.placeholder.com/600x800.png?text=Scanned+Answer+Page" alt="Answer Sheet Image">
+                </div>
+                <div class="navigation-buttons">
+                    <button id="gradingPrevButton">&larr; Previous</button>
+                    <button id="gradingNextButton">Next &rarr;</button>
+                </div>
+            </div>
+            <div class="marking-scheme">
+                <div class="marking-scheme-content"> <!-- Wrapper for actual rubric content -->
+                    <div class="section-title">Grading Rubric</div>
+                    <div class="section-switcher">
+                        <button id="gradingShowSecA" class="active">Section A</button>
+                        <button id="gradingShowSecB">Section B</button>
+                    </div>
+                    <div id="gradingSecAContent" class="section-content active">
+                        <div class="section-header">Sec-A</div>
+                        <div class="question-block"> <!-- This is for Q1 -->
+                            <h3>Q1)</h3>
+                            <!-- Sub-questions for Q1 will be dynamically added here by JS -->
+                        </div>
+                    </div>
+                    <div id="gradingSecBContent" class="section-content" style="display: none;">
+                        <div class="section-header">Sec-B</div>
+                        <div class="question-block"> <!-- This is for Q2 -->
+                            <h3>Q2)</h3>
+                            <div class="sub-question">
+                                <span class="question-label">a)</span>
+                                <div class="score-options" id="q2a_secb_scores">
+                                   <!-- JS will populate -->
+                                </div>
+                            </div>
+                            <div class="sub-question">
+                                <span class="question-label">b)</span>
+                                <div class="score-options" id="q2b_secb_scores">
+                                    <!-- JS will populate -->
+                                </div>
+                            </div>
+                        </div>
+                         <!-- Q3 to Q7 for Sec B will be dynamically added here by JS -->
+                    </div>
+                </div> <!-- End of marking-scheme-content -->
+                <div class="total-marks-section">
+                    <h4>Total Marks: </h4>
+                    <span id="totalMarksDisplay">0</span>
+                    <!-- AI Total will be added by JS if analysis runs -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- DOM Elements (Dashboard) ---
+    const loginPageContainer = document.getElementById('loginPageContainer');
+    const homeSection = document.getElementById('home-section');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const leftPanel = document.getElementById('leftPanel');
+    const toggleNavButton = document.getElementById('toggleNavButton');
+    const logoutButton = document.getElementById('logoutButton');
+    const dashboardLink = document.getElementById('dashboardLink');
+    const userNameEl = document.getElementById('userName');
+    const displayUserIdEl = document.getElementById('displayUserId');
+    const userAvatarEl = document.getElementById('userAvatar');
+    const collegeNameEl = document.getElementById('collegeName');
+    const mainContentTitle = document.getElementById('mainContentTitle');
+    const subjectCategoriesContainer = document.getElementById('subjectCategoriesContainer');
+    const papersListContainer = document.getElementById('papersListContainer');
+    const backToSubjectsButton = document.getElementById('backToSubjectsButton');
+    const newCategoryNameInput = document.getElementById('newCategoryNameInput');
+    const createCategoryButton = document.getElementById('createCategoryButton');
+    const newPaperTitleInput = document.getElementById('newPaperTitleInput');
+    const uploadCategorySelect = document.getElementById('uploadCategorySelect');
+    const paperFileInput = document.getElementById('paperFileInput');
+    const groundTruthPdfInput = document.getElementById('groundTruthPdfInput'); // For ground truth PDF
+    const uploadPaperButton = document.getElementById('uploadPaperButton');
+    const uploadPreviewContainer = document.getElementById('uploadPreviewContainer');
+    const uploadPreview = document.getElementById('uploadPreview');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+
+    // --- DOM Elements (Grading Interface) ---
+    const gradingInterfaceSection = document.getElementById('gradingInterfaceSection');
+    const gradingInterfaceTitle = document.getElementById('gradingInterfaceTitle');
+    const backToPapersFromGrading = document.getElementById('backToPapersFromGrading');
+    const gradingAnswerSheetTitle = document.getElementById('gradingAnswerSheetTitle');
+    const gradingImageDisplayEl = document.getElementById('gradingImageDisplay');
+    const gradingPrevButton = document.getElementById('gradingPrevButton');
+    const gradingNextButton = document.getElementById('gradingNextButton');
+    const gradingShowSecAButton = document.getElementById('gradingShowSecA');
+    const gradingShowSecBButton = document.getElementById('gradingShowSecB');
+    const gradingSecAContent = document.getElementById('gradingSecAContent');
+    const gradingSecBContent = document.getElementById('gradingSecBContent');
+    const totalMarksDisplay = document.getElementById('totalMarksDisplay');
+
+
+    // --- Mock User Data & "Database" (Dashboard) ---
+    const MOCK_USER = { name: "Dr. Jane Doe", id: "JD1001", avatarInitial: "JD", college: "Faculty of Engineering, Example University" };
+    let categories_db = [ {id: generateId(), name: 'English'}, {id: generateId(), name: 'Technical Communication'}, {id: generateId(), name: 'Principles of Programming'}, {id: generateId(), name: 'ML Analyzed Papers'}];
+    let papers_db = { };
+    categories_db.forEach(category => { 
+        if (!papers_db[category.id]) { papers_db[category.id] = []; }
+    });
+    // Pre-populate some papers
+    if (categories_db[2] && papers_db[categories_db[2].id]) {
+         papers_db[categories_db[2].id].push(
+            {id: generateId(), title: 'Student A - POP Midterm', status: 'Pending Review', imageUrl: 'https://via.placeholder.com/600x800/aabbcc/ffffff?text=POP+Midterm+Page+1', filePages:['https://via.placeholder.com/600x800/aabbcc/ffffff?text=POP+Midterm+Page+1', 'https://via.placeholder.com/600x800/aabbcc/ffffff?text=POP+Midterm+Page+2'], analysis: null, uploadedFilesInfo: [{name: 'pop_mid_a_p1.jpg', type:'image/jpeg'}, {name: 'pop_mid_a_p2.jpg', type:'image/jpeg'}], scores: {q1a_score: "2", q1b_score: "1.5"}},
+            {id: generateId(), title: 'Student B - POP Midterm', status: 'Flagged', imageUrl: 'https://via.placeholder.com/600x800/ddeeff/000000?text=POP+Midterm+B', filePages:['https://via.placeholder.com/600x800/ddeeff/000000?text=POP+Midterm+B'], analysis: { flagged_for_review: true, reasoning: 'Significant deviation in scores.'}, uploadedFilesInfo: [{name: 'pop_mid_b.jpg', type:'image/jpeg'}], scores: {}}
+        );
+    }
+     if (categories_db[3] && papers_db[categories_db[3].id]) {
+        papers_db[categories_db[3].id].push(
+             {id: generateId(), title: 'Paper X (ML)', status: 'Needs Human Review', imageUrl: 'https://via.placeholder.com/600x800/eeccaa/ffffff?text=ML+Paper+X+P1', filePages:['https://via.placeholder.com/600x800/eeccaa/ffffff?text=ML+Paper+X+P1', 'https://via.placeholder.com/600x800/eeccaa/ffffff?text=ML+Paper+X+P2', 'https://via.placeholder.com/600x800/eeccaa/ffffff?text=ML+Paper+X+P3'], analysis: { flagged_for_review: true, reasoning: 'HTR low confidence, LLM discrepancy high.', ai_evaluations: [{question_id: "Q1a", original_mark: "2", ai_reevaluated_mark:"1.0", discrepancy:true, ai_reasoning:"Student missed key point X."}]}, uploadedFilesInfo: [{name: 'ml_paper_x_p1.png', type:'image/png'}, {name: 'ml_paper_x_p2.png', type:'image/png'}, {name: 'ml_paper_x_p3.png', type:'image/png'}], scores: {q1a_score: "2"}}
+        );
+    }
+
+
+    function generateId() { return Math.random().toString(36).substr(2, 9); }
+
+    let currentView = 'login'; 
+    let lastViewedCategoryId = null; 
+
+    function showView(viewIdToShow) {
+        loginPageContainer.classList.add('hidden');
+        homeSection.classList.add('hidden');
+        gradingInterfaceSection.classList.add('hidden');
+
+        if (viewIdToShow === 'login') loginPageContainer.classList.remove('hidden');
+        else if (viewIdToShow === 'home') homeSection.classList.remove('hidden');
+        else if (viewIdToShow === 'grading') gradingInterfaceSection.classList.remove('hidden');
+        currentView = viewIdToShow;
+    }
+
+    loginForm.addEventListener('submit', function(event) { event.preventDefault(); const userId = document.getElementById('userId').value; const password = document.getElementById('password').value; if (userId === MOCK_USER.id && password === "password123") { userNameEl.textContent = MOCK_USER.name; displayUserIdEl.textContent = `ID: ${MOCK_USER.id}`; userAvatarEl.textContent = MOCK_USER.avatarInitial; collegeNameEl.textContent = MOCK_USER.college; populateUploadCategorySelect(); renderCategories(); showView('home'); loginError.textContent = ''; } else { loginError.textContent = 'Invalid User ID or Password.'; } });
+    toggleNavButton.addEventListener('click', function() { leftPanel.classList.toggle('collapsed'); toggleNavButton.innerHTML = leftPanel.classList.contains('collapsed') ? '<i class="fas fa-chevron-right"></i>' : '<i class="fas fa-chevron-left"></i>';});
+    logoutButton.addEventListener('click', function(event) { event.preventDefault(); showView('login'); loginForm.reset(); });
+    dashboardLink.addEventListener('click', function(event){ event.preventDefault(); showSubjectDashboard();});
+    backToSubjectsButton.addEventListener('click', showSubjectDashboard);
+    createCategoryButton.addEventListener('click', function() { const name = newCategoryNameInput.value.trim(); if (name) { if (categories_db.find(cat => cat.name.toLowerCase() === name.toLowerCase())) { alert('Category with this name already exists.'); return; } const newCategory = { id: generateId(), name: name }; categories_db.push(newCategory); papers_db[newCategory.id] = []; newCategoryNameInput.value = ''; renderCategories(); populateUploadCategorySelect(); } else { alert('Please enter a category name.'); } });
+    
+    let uploadedFilesData = []; 
+
+    paperFileInput.addEventListener('change', function(event) {
+        const files = event.target.files;
+        uploadedFilesData = []; 
+        uploadPreviewContainer.classList.add('hidden'); 
+        uploadPreview.src = "#";
+        uploadStatus.textContent = "";
+
+        if (files.length === 0) return;
+        
+        let imageFilesCount = 0;
+        let currentPdfFile = groundTruthPdfInput.files[0] ? null : (files.length === 1 && files[0].type === 'application/pdf' ? files[0] : null); // If GT PDF not set, try this one
+        let fileProcessingPromises = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+                imageFilesCount++;
+                const readerPromise = new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        uploadedFilesData.push({ name: file.name, type: file.type, dataUrl: e.target.result });
+                        resolve();
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                fileProcessingPromises.push(readerPromise);
+            } else if (file.type === 'application/pdf' && !currentPdfFile && !groundTruthPdfInput.files[0]) {
+                currentPdfFile = file; // Allow one student PDF if GT not selected
+                uploadedFilesData.push({ name: file.name, type: file.type, dataUrl: null });
+            } else if (file.type === 'application/pdf' && (currentPdfFile || groundTruthPdfInput.files[0])) {
+                alert("Multiple PDFs selected or student PDF with Ground Truth PDF. Please select only images for student answer sheets if providing a Ground Truth PDF, or only one PDF for the student answer sheet if not.");
+                paperFileInput.value = null; 
+                uploadedFilesData = [];
+                updateUploadStatusDisplay();
+                return;
+            }
+        }
+
+        Promise.all(fileProcessingPromises).then(() => {
+            if (imageFilesCount === 0 && !currentPdfFile) { 
+                 alert("Please select image files or one PDF file for student answer.");
+            } else {
+                uploadPreviewContainer.classList.remove('hidden'); 
+            }
+            updateUploadStatusDisplay();
+        }).catch(error => {
+            console.error("Error reading files:", error);
+            alert("Error processing uploaded files.");
+        });
+    });
+
+    function updateUploadStatusDisplay() {
+        const studentPdfFile = uploadedFilesData.find(f => f.type === 'application/pdf');
+        const imageCount = uploadedFilesData.filter(f => f.type.startsWith('image/')).length;
+        const groundTruthFile = groundTruthPdfInput.files[0];
+
+        let statusMsg = "";
+        if (imageCount > 0) {
+            statusMsg += `${imageCount} image(s) for student answer. `;
+            if (imageCount === 1 && uploadedFilesData[0].dataUrl) {
+                uploadPreview.src = uploadedFilesData[0].dataUrl;
+                uploadPreview.alt = uploadedFilesData[0].name;
+            } else {
+                uploadPreview.src = "#";
+                uploadPreview.alt = "Multiple images";
+            }
+        }
+        if (studentPdfFile) {
+            statusMsg += `Student PDF: ${studentPdfFile.name}. `;
+            if (imageCount === 0) { // Only PDF for student
+                uploadPreview.src = "#";
+                uploadPreview.alt = "Student PDF (no preview)";
+            }
+        }
+        if (groundTruthFile) {
+            statusMsg += `GT PDF: ${groundTruthFile.name}.`;
+            if(imageCount === 0 && !studentPdfFile) { // Only GT PDF
+                uploadPreview.src = "#";
+                uploadPreview.alt = "Ground Truth PDF (no preview)";
+            }
+        }
+        
+        if (statusMsg) {
+            uploadStatus.textContent = statusMsg;
+            uploadPreviewContainer.classList.remove('hidden');
+        } else {
+            uploadStatus.textContent = "";
+            uploadPreviewContainer.classList.add('hidden');
+        }
+    }
+
+
+    uploadPaperButton.addEventListener('click', async function() { // Made async for potential backend calls
+        const title = newPaperTitleInput.value.trim();
+        const categoryId = uploadCategorySelect.value;
+        const gtFile = groundTruthPdfInput.files[0];
+
+
+        if (!title || !categoryId || uploadedFilesData.length === 0) {
+            alert("Paper title, category, and at least one student answer file are required for upload.");
+            return;
+        }
+
+        const filePagesForPaper = [];
+        const uploadedFilesInfoForPaper = [];
+        let primaryImageUrl = 'https://via.placeholder.com/150x200.png?text=No+Preview'; 
+        let representativeFileName = "Multiple Files";
+        let representativeFileType = "multipart/mixed";
+
+        // Use a copy of uploadedFilesData to avoid issues if user changes selection during async operations
+        const currentUploads = [...uploadedFilesData]; 
+
+        currentUploads.forEach(fileData => {
+            if (fileData.type.startsWith('image/')) {
+                filePagesForPaper.push(fileData.dataUrl); 
+                if (primaryImageUrl.includes('placeholder')) { 
+                    primaryImageUrl = fileData.dataUrl;
+                }
+            } else if (fileData.type === 'application/pdf') {
+                filePagesForPaper.push(`simulated_pdf_path/${fileData.name}`); 
+                if (currentUploads.length === 1) primaryImageUrl = 'https://via.placeholder.com/150x200.png?text=PDF+File';
+            }
+            uploadedFilesInfoForPaper.push({ name: fileData.name, type: fileData.type });
+        });
+        
+        if (uploadedFilesInfoForPaper.length === 1) {
+            representativeFileName = uploadedFilesInfoForPaper[0].name;
+            representativeFileType = uploadedFilesInfoForPaper[0].type;
+        }
+
+        const newPaper = {
+            id: generateId(),
+            title: title,
+            status: 'New (Uploaded)',
+            imageUrl: primaryImageUrl, 
+            filePages: filePagesForPaper, 
+            analysis: null,
+            fileName: representativeFileName, 
+            fileType: representativeFileType, 
+            uploadedFilesInfo: uploadedFilesInfoForPaper,
+            scores: {},
+            groundTruthFile: gtFile ? { name: gtFile.name, type: gtFile.type, data: gtFile /* store File object */ } : null
+        };
+
+        papers_db[categoryId].push(newPaper);
+        alert(`Paper "${title}" with ${currentUploads.length} file(s) uploaded.`);
+
+        // Reset form
+        newPaperTitleInput.value = '';
+        uploadCategorySelect.value = '';
+        paperFileInput.value = null; 
+        groundTruthPdfInput.value = null;
+        uploadedFilesData = []; 
+        uploadPreviewContainer.classList.add('hidden');
+        uploadPreview.src = "#";
+        uploadStatus.textContent = "";
+
+
+        renderCategories(); 
+        if (!papersListContainer.classList.contains('hidden') && papersListContainer.dataset.currentCategory === categoryId) {
+            renderPapers(categoryId);
+        }
+    });
+    
+    function renderCategories() { subjectCategoriesContainer.innerHTML = ''; papersListContainer.classList.add('hidden'); subjectCategoriesContainer.classList.remove('hidden'); mainContentTitle.textContent = 'Subject Dashboard'; backToSubjectsButton.classList.add('hidden'); categories_db.forEach(category => { const categoryPapers = papers_db[category.id] || []; const paperCount = categoryPapers.length; let statusText = 'No papers yet', statusIcon = 'fa-folder-open'; if (paperCount > 0) { const newPapers = categoryPapers.filter(p => p.status?.toLowerCase().includes('new') || p.status?.toLowerCase().includes('flagged') || p.status?.toLowerCase().includes('needs human review')).length; statusText = newPapers > 0 ? `${newPapers} Actionable Paper${newPapers > 1 ? 's' : ''}` : `${paperCount} Paper${paperCount > 1 ? 's' : ''} (Reviewed)`; statusIcon = newPapers > 0 ? 'fa-inbox' : 'fa-check-circle'; } const card = document.createElement('div'); card.className = 'subject-card'; card.innerHTML = ` <div class="card-header"> <span class="subject-name">${category.name}</span> <span class="subject-id">ID: ${category.id.substring(0,6)}</span> </div> <div class="card-body"> <p class="status"><i class="fas ${statusIcon}"></i> ${statusText}</p> <a href="#" class="action-button view-papers-button ${paperCount === 0 ? 'disabled' : ''}" data-category-id="${category.id}"><i class="fas fa-folder-open"></i> View Papers</a> <button class="action-button edit-button" data-category-id="${category.id}" data-category-name="${category.name}"><i class="fas fa-edit"></i></button> <button class="action-button delete-button" data-category-id="${category.id}"><i class="fas fa-trash-alt"></i></button> </div> `; subjectCategoriesContainer.appendChild(card); }); addEventListenersToCategoryButtons(); }
+    function addEventListenersToCategoryButtons() { document.querySelectorAll('.view-papers-button:not(.disabled)').forEach(b => b.onclick = (e) => { e.preventDefault(); renderPapers(b.dataset.categoryId); }); document.querySelectorAll('.edit-button').forEach(b => b.onclick = () => { const newName = prompt(`Enter new name for category "${b.dataset.categoryName}":`, b.dataset.categoryName); if (newName && newName.trim() && newName.trim() !== b.dataset.categoryName) { const cat = categories_db.find(c => c.id === b.dataset.categoryId); if (cat) { cat.name = newName.trim(); renderCategories(); populateUploadCategorySelect(); } } }); document.querySelectorAll('.delete-button').forEach(b => b.onclick = () => { if (confirm('Delete category and its papers?')) { categories_db = categories_db.filter(c => c.id !== b.dataset.categoryId); delete papers_db[b.dataset.categoryId]; renderCategories(); populateUploadCategorySelect(); } }); }
+    function populateUploadCategorySelect() { uploadCategorySelect.innerHTML = '<option value="">-- Select Category --</option>'; categories_db.forEach(category => { const option = document.createElement('option'); option.value = category.id; option.textContent = category.name; uploadCategorySelect.appendChild(option); });}
+    function renderPapers(categoryId) { const category = categories_db.find(cat => cat.id === categoryId); if (!category) return; mainContentTitle.textContent = `Papers for ${category.name}`; subjectCategoriesContainer.classList.add('hidden'); papersListContainer.classList.remove('hidden'); papersListContainer.dataset.currentCategory = categoryId; backToSubjectsButton.classList.remove('hidden'); papersListContainer.innerHTML = ''; const papers = papers_db[categoryId] || []; if (papers.length === 0) { papersListContainer.innerHTML = '<p>No papers found in this category.</p>'; return; } papers.forEach(paper => { const paperItem = document.createElement('div'); paperItem.className = 'paper-item'; let analysisInfo = ''; if (paper.analysis && paper.analysis.flagged_for_review) { analysisInfo = `<p style="color: orange; font-size:0.9em;">ML Analysis: Flagged - ${paper.analysis.reasoning || 'No specific reason.'}</p>`; } else if (paper.analysis) { analysisInfo = `<p style="color: green; font-size:0.9em;">ML Analysis: Processed - OK</p>`; } let fileInfo = `File: ${paper.fileName || paper.id.substring(0,6)}`; if (paper.uploadedFilesInfo && paper.uploadedFilesInfo.length > 1) { fileInfo = `${paper.uploadedFilesInfo.length} files`; } else if (paper.uploadedFilesInfo && paper.uploadedFilesInfo.length === 1) { fileInfo = `File: ${paper.uploadedFilesInfo[0].name}`; } paperItem.innerHTML = ` <div class="card-header"> <span class="paper-title">${paper.title}</span> <span class="paper-id">${fileInfo}</span> </div> <div class="card-body"> <p class="status"><i class="fas fa-file-alt"></i> Status: ${paper.status}</p> ${analysisInfo} <div class="action-buttons"> <a href="#" class="action-button" onclick="openGradingInterface('${paper.id}', '${categoryId}'); return false;"><i class="fas fa-edit"></i> Grade/View</a> <button class="action-button analyze-button" onclick="handleAiAnalysis('${paper.id}', '${categoryId}')"><i class="fas fa-cogs"></i> AI Analyze</button> </div> </div> `; papersListContainer.appendChild(paperItem); }); lastViewedCategoryId = categoryId; }
+    function showSubjectDashboard(){ subjectCategoriesContainer.classList.remove('hidden'); papersListContainer.classList.add('hidden'); mainContentTitle.textContent = 'Subject Dashboard'; backToSubjectsButton.classList.add('hidden'); papersListContainer.removeAttribute('data-current-category'); renderCategories(); lastViewedCategoryId = null;}
+    
+    // window.simulateMLAnalysis = function(paperId, categoryId) { ... }; // Replaced by handleAiAnalysis
+
+    // --- Grading Interface Logic ---
+    let currentGradingPaper = null; 
+    let gradingAnswerSheetImages = []; 
+    let gradingCurrentPageIndex = 0;
+
+    window.openGradingInterface = function(paperId, categoryId) {
+        const paper = papers_db[categoryId]?.find(p => p.id === paperId);
+        if (paper) {
+            currentGradingPaper = paper;
+            if (!currentGradingPaper.scores) {
+                currentGradingPaper.scores = {};
+            }
+            setupGradingInterfaceView(paper);
+            showView('grading');
+        } else {
+            alert("Paper not found!");
+        }
+    }
+
+    function setupGradingInterfaceView(paper) {
+        gradingInterfaceTitle.textContent = `Grading: ${paper.title}`;
+        gradingAnswerSheetTitle.textContent = `Answer Sheet: ${paper.title}`;
+        
+        gradingAnswerSheetImages = Array.isArray(paper.filePages) && paper.filePages.length > 0 ?
+                                   paper.filePages.filter(url => url && !url.startsWith('simulated_pdf_path/')) : 
+                                   []; 
+        
+        if (gradingAnswerSheetImages.length === 0 && paper.filePages && paper.filePages.some(url => url.startsWith('simulated_pdf_path/'))) {
+            gradingImageDisplayEl.src = "https://via.placeholder.com/600x800.png?text=PDF+Uploaded+(No+Preview)";
+            gradingImageDisplayEl.alt = "PDF - No direct preview";
+        } else if (gradingAnswerSheetImages.length === 0) {
+             gradingImageDisplayEl.src = "https://via.placeholder.com/600x800.png?text=No+Image+Available";
+             gradingImageDisplayEl.alt = "No image available";
+        }
+
+        gradingCurrentPageIndex = 0;
+        displayGradingImage(gradingCurrentPageIndex);
+
+        // Re-initialize rubric scores to apply current paper's scores
+        initializeRubricScores(); // This will now use currentGradingPaper.scores inside populateScoreOptions
+        
+        updateTotalMarks(); 
+        displayAiEvaluationInGradingUI(paper.analysis ? paper.analysis.ai_evaluations : null); // Display AI marks if available
+        gradingShowSecAButton.click(); 
+    }
+
+
+    function displayGradingImage(index) {
+        if (gradingAnswerSheetImages.length > 0 && index >= 0 && index < gradingAnswerSheetImages.length) {
+            gradingImageDisplayEl.src = gradingAnswerSheetImages[index];
+            gradingImageDisplayEl.alt = `Answer Sheet Page ${index + 1} of ${gradingAnswerSheetImages.length}`;
+            gradingCurrentPageIndex = index;
+        } else if (gradingAnswerSheetImages.length === 0 && currentGradingPaper && currentGradingPaper.filePages && currentGradingPaper.filePages.some(url => url.startsWith('simulated_pdf_path/'))) {
+            // This case is handled in setupGradingInterfaceView for initial display
+        } else if (gradingAnswerSheetImages.length === 0) {
+             gradingImageDisplayEl.src = "https://via.placeholder.com/600x800.png?text=No+Image+Pages";
+             gradingImageDisplayEl.alt = "No image pages";
+        }
+
+        gradingPrevButton.disabled = (gradingAnswerSheetImages.length === 0 || gradingCurrentPageIndex === 0);
+        gradingNextButton.disabled = (gradingAnswerSheetImages.length === 0 || gradingCurrentPageIndex >= gradingAnswerSheetImages.length - 1);
+    }
+
+    gradingPrevButton.addEventListener('click', () => displayGradingImage(gradingCurrentPageIndex - 1));
+    gradingNextButton.addEventListener('click', () => displayGradingImage(gradingCurrentPageIndex + 1));
+
+    function attachScoreListeners() {
+        const scoreRadiosGrading = document.querySelectorAll('#gradingInterfaceSection .score-options input[type="radio"]');
+        scoreRadiosGrading.forEach(radio => {
+            const newRadio = radio.cloneNode(true); 
+            radio.parentNode.replaceChild(newRadio, radio);
+
+            newRadio.addEventListener('change', function(event) {
+                if (currentGradingPaper) {
+                    if (!currentGradingPaper.scores) currentGradingPaper.scores = {}; 
+                    currentGradingPaper.scores[event.target.name] = event.target.value;
+                    updateTotalMarks(); 
+                }
+            });
+        });
+    }
+
+    function updateTotalMarks() {
+        let currentTotal = 0;
+        const checkedRadios = document.querySelectorAll('#gradingInterfaceSection .score-options input[type="radio"]:checked');
+        checkedRadios.forEach(radio => {
+            currentTotal += parseFloat(radio.value);
+        });
+
+        if (currentTotal % 1 === 0) { 
+            totalMarksDisplay.textContent = currentTotal.toString();
+        } else { 
+            totalMarksDisplay.textContent = `${Math.floor(currentTotal)} 1/2`;
+        }
+    }
+    
+    gradingShowSecAButton.addEventListener('click', () => {
+        gradingSecAContent.style.display = 'block'; gradingSecAContent.classList.add('active');
+        gradingSecBContent.style.display = 'none'; gradingSecBContent.classList.remove('active');
+        gradingShowSecAButton.classList.add('active'); gradingShowSecBButton.classList.remove('active');
+    });
+    gradingShowSecBButton.addEventListener('click', () => {
+        gradingSecBContent.style.display = 'block'; gradingSecBContent.classList.add('active');
+        gradingSecAContent.style.display = 'none'; gradingSecAContent.classList.remove('active');
+        gradingShowSecBButton.classList.add('active'); gradingShowSecAButton.classList.remove('active');
+    });
+
+    backToPapersFromGrading.addEventListener('click', () => {
+        if (lastViewedCategoryId) {
+            renderPapers(lastViewedCategoryId);
+        } else {
+            showSubjectDashboard();
+        }
+        showView('home');
+    });
+
+    function populateScoreOptions(containerId, questionName, maxScore, increment) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = ''; 
+        for (let i = 0; i <= maxScore; i += increment) {
+            const scoreValue = i % 1 === 0 ? i : i.toFixed(1); 
+            const scoreDisplay = i % 1 === 0 ? i : `${Math.floor(i)} 1/2`;
+
+            const label = document.createElement('label');
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = questionName;
+            radio.value = scoreValue; 
+            
+            if (currentGradingPaper && currentGradingPaper.scores && currentGradingPaper.scores[questionName] === scoreValue) {
+                radio.checked = true;
+            }
+            label.appendChild(radio);
+            label.appendChild(document.createTextNode(` ${scoreDisplay}`));
+            container.appendChild(label);
+        }
+    }
+
+    function initializeRubricScores() {
+        const secAQ1SubQuestions = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+        const q1BlockSecA = gradingSecAContent.querySelector('.question-block'); 
+
+        if (q1BlockSecA) { 
+            q1BlockSecA.innerHTML = '<h3>Q1)</h3>'; 
+            secAQ1SubQuestions.forEach(sub => {
+                const scoreContainerId = `q1${sub}_scores`;
+                const subQDiv = document.createElement('div');
+                subQDiv.className = 'sub-question';
+                subQDiv.innerHTML = `<span class="question-label sec-a-q-label">${sub})</span>
+                                     <div class="score-options" id="${scoreContainerId}"></div>`;
+                q1BlockSecA.appendChild(subQDiv);
+                populateScoreOptions(scoreContainerId, `q1${sub}_score`, 2, 0.5);
+            });
+        }
+
+        if (document.getElementById('q2a_secb_scores')) populateScoreOptions('q2a_secb_scores', 'q2a_score_secb', 7, 0.5);
+        if (document.getElementById('q2b_secb_scores')) populateScoreOptions('q2b_secb_scores', 'q2b_score_secb', 7, 0.5);
+        
+        const secBContainer = document.getElementById('gradingSecBContent');
+        if (secBContainer) {
+            const existingDynamicBlocks = secBContainer.querySelectorAll('.question-block[data-dynamic="true"]');
+            existingDynamicBlocks.forEach(block => block.remove());
+
+            for (let qNum = 3; qNum <= 7; qNum++) {
+                const qBlock = document.createElement('div');
+                qBlock.className = 'question-block';
+                qBlock.dataset.dynamic = "true"; 
+                qBlock.innerHTML = `<h3>Q${qNum})</h3>`;
+                
+                const subQaScoreContainerId = `q${qNum}a_secb_scores`;
+                const subQaDiv = document.createElement('div');
+                subQaDiv.className = 'sub-question';
+                subQaDiv.innerHTML = `<span class="question-label">a)</span>
+                                      <div class="score-options" id="${subQaScoreContainerId}"></div>`;
+                qBlock.appendChild(subQaDiv);
+                
+                const subQbScoreContainerId = `q${qNum}b_secb_scores`;
+                const subQbDiv = document.createElement('div');
+                subQbDiv.className = 'sub-question';
+                subQbDiv.innerHTML = `<span class="question-label">b)</span>
+                                      <div class="score-options" id="${subQbScoreContainerId}"></div>`;
+                qBlock.appendChild(subQbDiv);
+                secBContainer.appendChild(qBlock); 
+                populateScoreOptions(subQaScoreContainerId, `q${qNum}a_score_secb`, 7, 0.5);
+                populateScoreOptions(subQbScoreContainerId, `q${qNum}b_score_secb`, 7, 0.5);
+            }
+        }
+        attachScoreListeners(); 
+        updateTotalMarks(); 
+    }
+
+    // --- AI Analysis Integration Placeholder ---
+    async function handleAiAnalysis(paperId, categoryId) {
+        const paper = papers_db[categoryId]?.find(p => p.id === paperId);
+        if (!paper) {
+            alert("Paper not found for AI analysis.");
+            return;
+        }
+        if (!paper.scores || Object.keys(paper.scores).length === 0) {
+             alert("Please enter the original scores in the grading rubric first before AI analysis.");
+             return;
+        }
+        if (!paper.groundTruthFile) {
+            alert("Ground Truth PDF not uploaded for this paper. AI analysis requires it.");
+            return;
+        }
+        if (!paper.uploadedFilesInfo || paper.uploadedFilesInfo.filter(f => f.type.startsWith('image/')).length === 0) {
+            alert("No student answer image files found for this paper. AI analysis requires images.");
+            return;
+        }
+
+        alert(`Starting AI analysis for: ${paper.title}... This may take a moment.`);
+        const originalStatus = paper.status;
+        paper.status = "AI Processing...";
+        renderPapers(categoryId); 
+
+        const formData = new FormData();
+        formData.append('original_marks_json', JSON.stringify(paper.scores));
+        formData.append('ground_truth_pdf', paper.groundTruthFile.data); // Send the File object
+
+        // Convert dataURLs back to Blobs for student answer images
+        let imageFilePromises = paper.filePages
+            .filter(filePageUrl => filePageUrl && filePageUrl.startsWith('data:image'))
+            .map(async (filePageUrl, index) => {
+                const response = await fetch(filePageUrl);
+                const blob = await response.blob();
+                const originalFileInfo = paper.uploadedFilesInfo.filter(f => f.type.startsWith('image/'))[index] || { name: `page_${index + 1}.png`, type: blob.type };
+                formData.append('student_answer_images', blob, originalFileInfo.name);
+            });
+        
+        await Promise.all(imageFilePromises);
+
+        if (formData.getAll('student_answer_images').length === 0) {
+            alert("Could not prepare student answer images for AI analysis.");
+            paper.status = originalStatus;
+            renderPapers(categoryId);
+            return;
+        }
+        
+        // Define default question allocations (this should ideally be dynamic/configurable per exam type)
+        const questionAllocations = { /* Q1a: 2, Q1b: 2, ... Q7b: 7 */ };
+        const secAQ1SubQuestions = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+        secAQ1SubQuestions.forEach(sub => questionAllocations[`Q1${sub}`] = 2);
+        for (let qNum = 2; qNum <= 7; qNum++) {
+            questionAllocations[`Q${qNum}a`] = 7;
+            questionAllocations[`Q${qNum}b`] = 7;
+        }
+        formData.append('question_allocations_json', JSON.stringify(questionAllocations));
+
+
+        try {
+            // IMPORTANT: Replace 'http://127.0.0.1:5001/analyze-paper' with your actual backend endpoint URL
+            const response = await fetch('http://127.0.0.1:5001/analyze-paper', { 
+                method: 'POST',
+                body: formData 
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: "Unknown error from AI server." }));
+                throw new Error(`AI Server error: ${response.status} - ${errorData.detail || errorData.error || JSON.stringify(errorData)}`);
+            }
+
+            const analysisResult = await response.json();
+            console.log("AI Analysis Result Received:", analysisResult);
+
+            paper.analysis = analysisResult; // Store the full structured result from backend
+
+            let overallDiscrepancy = false;
+            if (analysisResult.discrepancies && analysisResult.discrepancies.length > 0) {
+                overallDiscrepancy = true;
+            } else if (analysisResult.image_evaluations) { // Fallback check if backend structure is different
+                 overallDiscrepancy = analysisResult.image_evaluations.some(imgEval => 
+                    imgEval.deepseek_question_evaluations && imgEval.deepseek_question_evaluations.some(qEval => qEval.discrepancy)
+                );
+            }
+
+
+            paper.status = overallDiscrepancy ? "Flagged (AI Discrepancy)" : "Reviewed (AI OK)";
+            alert(`AI Analysis complete for ${paper.title}. Status: ${paper.status}`);
+
+        } catch (error) {
+            console.error('Error during AI analysis fetch:', error);
+            alert(`AI Analysis failed: ${error.message}`);
+            paper.status = "AI Analysis Failed";
+        } finally {
+            renderPapers(categoryId); 
+            renderCategories(); 
+            // If current grading view is for this paper, refresh it to show AI insights
+            if (currentView === 'grading' && currentGradingPaper && currentGradingPaper.id === paper.id) {
+                setupGradingInterfaceView(paper); // This will call displayAiEvaluationInGradingUI
+            }
+        }
+    }
+
+    function displayAiEvaluationInGradingUI(aiAnalysisData) {
+        // Clear previous AI highlights and marks
+        document.querySelectorAll('.sub-question').forEach(sq => sq.classList.remove('discrepancy-highlight'));
+        document.querySelectorAll('.ai-mark-display').forEach(el => el.remove());
+        
+        const totalMarksSec = document.querySelector('.total-marks-section');
+        let aiTotalDisplay = totalMarksSec.querySelector('#aiTotalMarksDisplay');
+        if (aiTotalDisplay) aiTotalDisplay.remove(); // Remove old AI total if exists
+        let aiTotalLabel = totalMarksSec.querySelector('#aiTotalLabel');
+        if (aiTotalLabel) aiTotalLabel.remove();
+
+
+        if (!currentGradingPaper || !aiAnalysisData || !aiAnalysisData.image_evaluations) {
+            console.log("No AI analysis data to display or not in grading view.");
+            return;
+        }
+        
+        let aiOverallTotalScore = 0;
+        let humanOverallTotalScore = 0; // Recalculate human total for comparison
+
+        // Calculate human total based on current paper.scores
+        if(currentGradingPaper.scores){
+            Object.values(currentGradingPaper.scores).forEach(scoreVal => {
+                humanOverallTotalScore += parseFloat(scoreVal);
+            });
+        }
+
+
+        aiAnalysisData.image_evaluations.forEach(imageEval => {
+            if (imageEval.deepseek_question_evaluations) {
+                imageEval.deepseek_question_evaluations.forEach(qEval => {
+                    if (qEval.error) {
+                        console.warn(`AI Eval Error for ${qEval.question_id}: ${qEval.error}`);
+                        return;
+                    }
+                    // Normalize question_id from AI (e.g., Q1a) to match score name (e.g., q1a_score)
+                    const qIdNormalized = qEval.question_id ? qEval.question_id.toLowerCase() : null;
+                    const scoreName = qIdNormalized ? `${qIdNormalized}_score` : null; // For Sec A
+                    const scoreNameSecB = qIdNormalized ? `${qIdNormalized}_score_secb` : null; // For Sec B
+
+                    const radioGroup = document.querySelector(`input[name="${scoreName}"]`) || document.querySelector(`input[name="${scoreNameSecB}"]`);
+                    const subQuestionDiv = radioGroup ? radioGroup.closest('.sub-question') : null;
+
+                    if (subQuestionDiv) {
+                        const aiMarkSpan = document.createElement('span');
+                        aiMarkSpan.className = 'ai-mark-display';
+                        aiMarkSpan.textContent = ` (AI: ${qEval.ai_reevaluated_mark !== undefined ? qEval.ai_reevaluated_mark : 'N/A'})`;
+                        
+                        const humanScoreForThisQ = currentGradingPaper.scores[scoreName] || currentGradingPaper.scores[scoreNameSecB];
+                        
+                        if (humanScoreForThisQ !== undefined && qEval.ai_reevaluated_mark !== undefined &&
+                            parseFloat(humanScoreForThisQ) !== parseFloat(qEval.ai_reevaluated_mark)) {
+                            subQuestionDiv.classList.add('discrepancy-highlight');
+                            aiMarkSpan.style.fontWeight = 'bold'; // Make AI mark bold if different
+                        }
+                        // Append AI mark next to the question label or score options
+                        const questionLabelEl = subQuestionDiv.querySelector('.question-label');
+                        if(questionLabelEl) questionLabelEl.appendChild(aiMarkSpan);
+                        else subQuestionDiv.appendChild(aiMarkSpan); // Fallback
+                    }
+                    if (qEval.ai_reevaluated_mark !== undefined && !isNaN(parseFloat(qEval.ai_reevaluated_mark))) {
+                        aiOverallTotalScore += parseFloat(qEval.ai_reevaluated_mark);
+                    }
+                });
+            }
+        });
+        
+        // Display AI Total
+        aiTotalLabel = document.createElement('h4');
+        aiTotalLabel.id = 'aiTotalLabel';
+        aiTotalLabel.style.display = "inline";
+        aiTotalLabel.style.marginLeft = "20px"; // Add some space
+        aiTotalLabel.textContent = "AI Total: ";
+        
+        aiTotalDisplay = document.createElement('span');
+        aiTotalDisplay.id = 'aiTotalMarksDisplay';
+        
+        if (aiOverallTotalScore % 1 === 0) {
+            aiTotalDisplay.textContent = aiOverallTotalScore.toString();
+        } else {
+            aiTotalDisplay.textContent = `${Math.floor(aiOverallTotalScore)} 1/2`;
+        }
+
+        if (Math.abs(humanOverallTotalScore - aiOverallTotalScore) > 0.01) { // Compare float totals
+            aiTotalDisplay.classList.add('discrepancy');
+        }
+        
+        totalMarksSec.appendChild(aiTotalLabel);
+        totalMarksSec.appendChild(aiTotalDisplay);
+    }
+
+
+    // --- Initial Setup ---
+    showView('login');
+    toggleNavButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    initializeRubricScores(); // This will also call attachScoreListeners and updateTotalMarks
+
+});
+</script>
+</body>
+</html>
